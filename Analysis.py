@@ -1,3 +1,4 @@
+import asyncio
 import math
 from itertools import groupby
 from operator import itemgetter
@@ -30,15 +31,10 @@ class Analysis:
         for job in grouped_list:
             highest_list.append(max(job, key=lambda x: x['점수']))
 
+        party_info = []
+
         for i in highest_list:
-            i['파티구성'] = await self.fflog.get_party_member(i['code'], i['id'])
-            i['직업'] = i['job']
-            del i['code']
-            del i['id']
-            del i['job']
+            party_info.append(self.fflog.get_party_info(i))
 
-        return highest_list
-
-
-
+        return await asyncio.gather(*party_info)
 

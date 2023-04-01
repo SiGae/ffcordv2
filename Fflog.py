@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import requests
@@ -88,6 +89,15 @@ class Fflog:
         recent_expansion = sorted(expansions, key=lambda d: d['id'], reverse=True)
         self.recent_expansion = recent_expansion[0]['id']
 
+    async def get_party_info(self, log):
+        log['파티구성'] = await self.get_party_member(log['code'], log['id'])
+        log['직업'] = log['job']
+        del log['code']
+        del log['id']
+        del log['job']
+
+        return log
+
 # 파티원 직업 검색
     async def get_party_member(self, code, fight_id):
         body = '''
@@ -142,10 +152,10 @@ class Fflog:
 
         if len(self.savages) > 0:
             for savage in self.savages:
+                savage_encounter = []
                 for encounter in savage['encounters']:
-                    parse_data = await self.get_parse_data(encounter)
-                    if parse_data is not None:
-                        result_set.append(parse_data)
+                    savage_encounter.append(self.get_parse_data(encounter))
+                result_set.append(await asyncio.gather(*savage_encounter))
 
         return result_set
 

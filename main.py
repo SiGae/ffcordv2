@@ -1,5 +1,5 @@
 # This is a sample Python script.
-
+import asyncio
 # Press ⌃R to execute it or replace it with your code.
 # Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
 import json
@@ -17,17 +17,16 @@ def formatting_raw(raw):
     return score + party_member + job
 
 
-def main(name, server):
+async def main(name, server):
     print("start_parse")
     fflog = Fflog()
     print('get token')
-    fflog.check_character_valid(name, server)
-    print('get user')
-    fflog.get_recent_expansion()
-    print('get expansion')
-    fflog.get_savage_raid_list()
+
+    setup = [fflog.check_character_valid(name, server), fflog.get_recent_expansion()]
+    await asyncio.gather(*setup)
+    await fflog.get_savage_raid_list()
     print('get raid data')
-    output = {'parse_result': fflog.classify_by_season()}
+    output = {'parse_result': await fflog.classify_by_season()}
     print("end_parse")
 
     return output
@@ -47,18 +46,19 @@ async def on_ready():
 @client.event
 async def on_message(message):
     split_message = message.content.split()
-    if not message.author.bot and split_message[0] == '/ff':
-        if split_message[1] in env.SERVER:
-            text = main(split_message[2], env.SERVER[split_message[1]])['parse_result']
-            print("system_call")
-            flag = True
-            for i in text:
-                if flag:
-                    await message.channel.send("`" + i['name'] + "`")
-                    for parse_data in i['data']:
-                        await message.channel.send(formatting_raw(parse_data))
-                    if text[-1] == i:
-                        flag = False
+    if not message.author.bot and (split_message[0] == '/ff' and split_message[1] in env.SERVER):
+        print(split_message[2])
+        print(env.SERVER[split_message[1]])
+        text = (await main(split_message[2], env.SERVER[split_message[1]]))['parse_result']
+        flag = True
+        for i in text[0]:
+            if flag:
+                print(i)
+                await message.channel.send("`" + i['name'] + "`")
+                for parse_data in i['data']:
+                    await message.channel.send(formatting_raw(parse_data))
+                if text[-1] == i:
+                    flag = False
 
 
 client.run(env.DISCORD_TOKEN)
