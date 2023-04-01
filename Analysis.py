@@ -28,7 +28,7 @@ class Analysis:
             grouped_list.append(list(g))
 
         for job in grouped_list:
-            highest_list.append(max(job, key=lambda x: x['job']))
+            highest_list.append(max(job, key=lambda x: x['점수']))
 
         for i in highest_list:
             i['파티구성'] = await self.fflog.get_party_member(i['code'], i['id'])
