@@ -9,7 +9,7 @@ class Analysis:
         self.raw_data = raw_data
         self.fflog = fflog
 
-    def get_highest_parse(self):
+    async def get_highest_parse(self):
         ranks = self.raw_data['ranks']
         parse_list = []
         for rank in ranks:
@@ -31,7 +31,7 @@ class Analysis:
             highest_list.append(max(job, key=lambda x: x['job']))
 
         for i in highest_list:
-            i['파티구성'] = self.fflog.get_party_member(i['code'], i['id'])
+            i['파티구성'] = await self.fflog.get_party_member(i['code'], i['id'])
             i['직업'] = i['job']
             del i['code']
             del i['id']

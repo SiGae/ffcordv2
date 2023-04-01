@@ -1,4 +1,7 @@
+import logging
+
 import requests
+import aiohttp
 import json
 from Analysis import Analysis
 
@@ -19,8 +22,8 @@ class Fflog:
         )
         self.token = response.json()["access_token"]
 
-    def check_character_valid(self, name, server):
 # 캐릭터 명 유효성 확인
+    async def check_character_valid(self, name, server):
         body = '''{ characterData {
               character(name: "%s", serverSlug: "%s", serverRegion: "KR") {
                 id
@@ -28,12 +31,12 @@ class Fflog:
             }}
           ''' % (name, server)
 
-        self.user_id = json.loads(self.call_fflog_server(body))['data']['characterData']['character']['id']
+        self.user_id = (await self.call_fflog_server(body))['data']['characterData']['character']['id']
 
         return
 
-    def get_savage_raid_list(self):
 # 레이드 종류 검색
+    async def get_savage_raid_list(self):
         body = '''
             {
                 worldData {
@@ -55,9 +58,8 @@ class Fflog:
             }
         ''' % self.recent_expansion
 
-        result = self.call_fflog_server(body)
 
-        zones = json.loads(result)['data']['worldData']['expansion']['zones']
+        zones = (await self.call_fflog_server(body))['data']['worldData']['expansion']['zones']
 
         for zone in zones:
             if len([difficulty for difficulty in zone['difficulties']
@@ -70,8 +72,8 @@ class Fflog:
 
         return
 
-    def get_recent_expansion(self):
 # 최근 확장팩 정보 취득
+    async def get_recent_expansion(self):
         body = '''
         { 
             worldData {
@@ -82,12 +84,12 @@ class Fflog:
         }
         '''
 
-        expansions = json.loads(self.call_fflog_server(body))['data']['worldData']['expansions']
+        expansions = (await self.call_fflog_server(body))['data']['worldData']['expansions']
         recent_expansion = sorted(expansions, key=lambda d: d['id'], reverse=True)
         self.recent_expansion = recent_expansion[0]['id']
 
-    def get_party_member(self, code, fight_id):
 # 파티원 직업 검색
+    async def get_party_member(self, code, fight_id):
         body = '''
         {
             reportData {
@@ -98,8 +100,7 @@ class Fflog:
         }
 
         ''' % (code, fight_id)
-
-        party_member = json.loads(self.call_fflog_server(body))['data']['reportData']['report']['rankings']['data'][0]['roles']
+        party_member = (await self.call_fflog_server(body))['data']['reportData']['report']['rankings']['data'][0]['roles']
         classes = []
 
         for class_group, class_data in party_member.items():
@@ -119,7 +120,7 @@ class Fflog:
 
         return classes
 
-    def get_parse_data(self, encounter_id):
+    async def get_parse_data(self, encounter_id):
         body = '''{ characterData {
               character(id: %d) {
                 encounterRankings(encounterID: %d, difficulty: 101, metric: rdps)
@@ -127,32 +128,36 @@ class Fflog:
             }}
           ''' % (self.user_id, encounter_id['id'])
 
-        result = json.loads(self.call_fflog_server(body))
+        result = await self.call_fflog_server(body)
         data = result['data']['characterData']['character']['encounterRankings']
         if not ('error' in data.keys()):
 
             analasys = Analysis(data, self)
-            return {'name': encounter_id['name'], 'data': analasys.get_highest_parse()}
+            return {'name': encounter_id['name'], 'data': await analasys.get_highest_parse()}
         return
 
-    def classify_by_season(self):
+    async def classify_by_season(self):
 
         result_set = []
 
         if len(self.savages) > 0:
             for savage in self.savages:
                 for encounter in savage['encounters']:
-                    parse_data = self.get_parse_data(encounter)
+                    parse_data = await self.get_parse_data(encounter)
                     if parse_data is not None:
                         result_set.append(parse_data)
 
         return result_set
 
-    def call_fflog_server(self, query):
-        data = requests.get('https://www.fflogs.com/api/v2/client',
-                            headers={'Authorization': 'Bearer {}'.format(self.token),
-                                     'Content-Type': 'application/json'},
-                            json={"query": query})
-
-        return data.content.decode('utf-8')
 # fflog 서버 호출
+    async def call_fflog_server(self, query):
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get('https://www.fflogs.com/api/v2/client', headers={'Authorization': 'Bearer {}'.format(self.token), 'Content-Type': 'application/json'}, json={"query": query}) as resp:
+                try:
+                    response_content = await resp.json()
+                except Exception:
+                    logger = logging.getLogger()
+                    logger.exception('Failed to read response data')
+                finally:
+                    return response_content
