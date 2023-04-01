@@ -30,7 +30,7 @@ JOB = {
     'Summoner': '소환사',
     'Warrior': '전사',
     'WhiteMage': '백마도사',
-    'Red Mage': '적마도사',
+    'RedMage': '적마도사',
     'Samurai': '사무라이',
     'Dancer': '무도가',
     'Gunbreaker': '건브레이커',
@@ -61,9 +61,9 @@ JOB_KEY = {
 }
 
 JOB_SHORT = {
-    1: '건',
+    1: '암',
     2: '전',
-    3: '암',
+    3: '건',
     4: '나',
     5: '점',
     6: '백',
