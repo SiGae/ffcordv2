@@ -20,6 +20,7 @@ class Fflog:
         self.token = response.json()["access_token"]
 
     def check_character_valid(self, name, server):
+# 캐릭터 명 유효성 확인
         body = '''{ characterData {
               character(name: "%s", serverSlug: "%s", serverRegion: "KR") {
                 id
@@ -32,6 +33,7 @@ class Fflog:
         return
 
     def get_savage_raid_list(self):
+# 레이드 종류 검색
         body = '''
             {
                 worldData {
@@ -69,6 +71,7 @@ class Fflog:
         return
 
     def get_recent_expansion(self):
+# 최근 확장팩 정보 취득
         body = '''
         { 
             worldData {
@@ -84,6 +87,7 @@ class Fflog:
         self.recent_expansion = recent_expansion[0]['id']
 
     def get_party_member(self, code, fight_id):
+# 파티원 직업 검색
         body = '''
         {
             reportData {
@@ -151,3 +155,4 @@ class Fflog:
                             json={"query": query})
 
         return data.content.decode('utf-8')
+# fflog 서버 호출
