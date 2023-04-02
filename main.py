@@ -1,11 +1,9 @@
-# This is a sample Python script.
 import asyncio
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
-import json
-import requests
+import os
+
 import env
 import discord
+from multiprocessing import Process
 from Fflog import Fflog
 
 
@@ -30,6 +28,13 @@ async def main(name, server):
     print("end_parse")
 
     return output
+
+
+async def refresh_token():
+    while True:
+        await Fflog.getToken()
+        await Fflog.get_recent_expansion()
+        await asyncio.sleep(30)
 
 
 intents = discord.Intents.default()
@@ -60,7 +65,10 @@ async def on_message(message):
                 if text[-1] == i:
                     flag = False
 
-
+loop = asyncio.get_event_loop()
+loop.create_task(Fflog.getToken())
+loop.run_forever()
+print('token created')
 client.run(env.DISCORD_TOKEN)
 
 
