@@ -14,13 +14,14 @@ class Fflog:
     recent_expansion = None
     savages = []
 
-    def __init__(self):
-        response = requests.post(
-            TOKEN_URL,
-            data={"grant_type": "client_credentials"},
-            auth=(FFLOG_CLIENT, FFLOG_SECRET),
-        )
-        self.token = response.json()["access_token"]
+    @classmethod
+    async def getToken(cls):
+        async with aiohttp.ClientSession() as session:
+            async with session.post(TOKEN_URL,
+                                    data={"grant_type": "client_credentials"},
+                                    auth=aiohttp.BasicAuth(FFLOG_CLIENT, FFLOG_SECRET)
+                                    ) as resp:
+                cls.token = (await resp.json())["access_token"]
 
 # 캐릭터 명 유효성 확인
     async def check_character_valid(self, name, server):
@@ -36,7 +37,8 @@ class Fflog:
         return
 
 # 레이드 종류 검색
-    async def get_savage_raid_list(self):
+    @classmethod
+    async def get_savage_raid_list(cls):
         body = '''
             {
                 worldData {
@@ -56,16 +58,15 @@ class Fflog:
                     }
                 }
             }
-        ''' % self.recent_expansion
+        ''' % cls.recent_expansion
 
-
-        zones = (await self.call_fflog_server(body))['data']['worldData']['expansion']['zones']
+        zones = (await cls.call_fflog_server(body))['data']['worldData']['expansion']['zones']
 
         for zone in zones:
             if len([difficulty for difficulty in zone['difficulties']
                     if difficulty['id'] == 101 and difficulty['sizes'] == [8]]) > 0:
 
-                self.savages.append({
+                cls.savages.append({
                     'name': zone['name'],
                     'encounters': zone['encounters']
                 })
@@ -73,7 +74,8 @@ class Fflog:
         return
 
 # 최근 확장팩 정보 취득
-    async def get_recent_expansion(self):
+    @classmethod
+    async def get_recent_expansion(cls):
         body = '''
         { 
             worldData {
@@ -84,9 +86,9 @@ class Fflog:
         }
         '''
 
-        expansions = (await self.call_fflog_server(body))['data']['worldData']['expansions']
+        expansions = (await cls.call_fflog_server(body))['data']['worldData']['expansions']
         recent_expansion = sorted(expansions, key=lambda d: d['id'], reverse=True)
-        self.recent_expansion = recent_expansion[0]['id']
+        cls.recent_expansion = recent_expansion[0]['id']
 
     async def get_party_info(self, log):
         log['파티구성'] = await self.get_party_member(log['code'], log['id'])
@@ -99,6 +101,7 @@ class Fflog:
 
 # 파티원 직업 검색
     async def get_party_member(self, code, fight_id):
+        print(f'code{code}, fight_id{fight_id}')
         body = '''
         {
             reportData {
@@ -150,19 +153,24 @@ class Fflog:
         result_set = []
 
         if len(self.savages) > 0:
+            savage_list = []
             for savage in self.savages:
                 savage_encounter = []
                 for encounter in savage['encounters']:
                     savage_encounter.append(self.get_parse_data(encounter))
-                result_set.append(await asyncio.gather(*savage_encounter))
+                savage_list.append(asyncio.gather(*savage_encounter))
+
+            for savage in savage_list:
+                result_set.append(await savage)
 
         return result_set
 
 # fflog 서버 호출
-    async def call_fflog_server(self, query):
+    @classmethod
+    async def call_fflog_server(cls, query):
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(f'{CLIENT_URL}', headers={'Authorization': 'Bearer {}'.format(self.token), 'Content-Type': 'application/json'}, json={"query": query}) as resp:
+            async with session.get(f'{CLIENT_URL}', headers={'Authorization': 'Bearer {}'.format(cls.token), 'Content-Type': 'application/json'}, json={"query": query}) as resp:
                 try:
                     response_content = await resp.json()
                 except Exception:
