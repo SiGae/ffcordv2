@@ -4,7 +4,7 @@ DISCORD_TOKEN = os.environ.get('DISCORD_TOKEN')
 FFLOG_CLIENT = os.environ.get('FFLOG_CLIENT')
 FFLOG_SECRET = os.environ.get('FFLOG_SECRET')
 
-BASE_URL = 'https://www.fflogs.com/'
+BASE_URL = 'https://ko.fflogs.com/'
 TOKEN_URL = BASE_URL + 'oauth/token'
 CLIENT_URL = BASE_URL + 'api/v2/client'
 

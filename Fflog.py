@@ -3,10 +3,9 @@ import logging
 
 import requests
 import aiohttp
-import json
 from Analysis import Analysis
 
-from env import FFLOG_CLIENT, FFLOG_SECRET, CLIENT_URL, TOKEN_URL, JOB_KEY, JOB_SHORT
+from env import FFLOG_CLIENT, FFLOG_SECRET, CLIENT_URL, TOKEN_URL, JOB_KEY, JOB_SHORT, BASE_URL
 
 
 class Fflog:
@@ -163,7 +162,7 @@ class Fflog:
     async def call_fflog_server(self, query):
 
         async with aiohttp.ClientSession() as session:
-            async with session.get('https://www.fflogs.com/api/v2/client', headers={'Authorization': 'Bearer {}'.format(self.token), 'Content-Type': 'application/json'}, json={"query": query}) as resp:
+            async with session.get(f'{CLIENT_URL}', headers={'Authorization': 'Bearer {}'.format(self.token), 'Content-Type': 'application/json'}, json={"query": query}) as resp:
                 try:
                     response_content = await resp.json()
                 except Exception:
