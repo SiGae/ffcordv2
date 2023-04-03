@@ -42,7 +42,7 @@ JOB_KEY = {
     'Astrologian': 5,
     'Bard': 16,
     'BlackMage': 18,
-    'DarkKnight': 3,
+    'DarkKnight': 1,
     'Dragoon': 11,
     'Machinist': 15,
     'Monk': 10,
@@ -55,7 +55,7 @@ JOB_KEY = {
     'RedMage': 17,
     'Samurai': 9,
     'Dancer': 14,
-    'Gunbreaker': 1,
+    'Gunbreaker': 3,
     'Reaper': 13,
     'Sage': 8
 }
