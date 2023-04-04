@@ -1,10 +1,8 @@
 import asyncio
 import logging
-
-import requests
 import aiohttp
-from Analysis import Analysis
 
+from Analysis import Analysis
 from env import FFLOG_CLIENT, FFLOG_SECRET, CLIENT_URL, TOKEN_URL, JOB_KEY, JOB_SHORT, BASE_URL
 
 
