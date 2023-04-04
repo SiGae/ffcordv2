@@ -67,10 +67,7 @@ async def on_message(message):
                     flag = False
 
 loop = asyncio.get_event_loop()
-loop.create_task(Fflog.getToken())
+loop.create_task(refresh_token())
+loop.create_task(asyncio.to_thread(client.run, env.DISCORD_TOKEN))
 loop.run_forever()
-print('token created')
-client.run(env.DISCORD_TOKEN)
-
-
 
