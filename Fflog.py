@@ -101,7 +101,6 @@ class Fflog:
 
 # 파티원 직업 검색
     async def get_party_member(self, code, fight_id):
-        print(f'code{code}, fight_id{fight_id}')
         body = '''
         {
             reportData {
@@ -132,38 +131,39 @@ class Fflog:
 
         return classes
 
-    async def get_parse_data(self, encounter_id):
+    async def get_parse_data(self, encounters, name, server):
+        query_list = []
+        key_back = {}
+        for encounter in encounters:
+            query_list.append(f'a{encounter["id"]}: encounterRankings(encounterID: {encounter["id"]}, difficulty: 101, metric: rdps)')
+            key_back[f'a{encounter["id"]}'] = encounter["name"]
+
         body = '''{ characterData {
-              character(id: %d) {
-                encounterRankings(encounterID: %d, difficulty: 101, metric: rdps)
+              character(name: "%s", serverSlug: "%s", serverRegion: "KR") {
+                %s
               }
             }}
-          ''' % (self.user_id, encounter_id['id'])
+          ''' % (name, server, '\n'.join(query_list))
 
         result = await self.call_fflog_server(body)
-        data = result['data']['characterData']['character']['encounterRankings']
-        if not ('error' in data.keys()):
 
-            analasys = Analysis(data, self)
-            return {'name': encounter_id['name'], 'data': await analasys.get_highest_parse()}
-        return
+        response = []
 
-    async def classify_by_season(self):
+        if not ('error' in result.keys()):
+            response = await asyncio.gather(*[self.get_score(key_back[key], Analysis(encounter, self)) for key, encounter in result['data']['characterData']['character'].items()])
 
-        result_set = []
+        return response
 
+    async def get_score(self, name: str, analysis: Analysis):
+        return {'name': name, 'data': await analysis.get_highest_parse()}
+
+    async def classify_by_season(self, name, server):
         if len(self.savages) > 0:
-            savage_list = []
-            for savage in self.savages:
-                savage_encounter = []
-                for encounter in savage['encounters']:
-                    savage_encounter.append(self.get_parse_data(encounter))
-                savage_list.append(asyncio.gather(*savage_encounter))
 
-            for savage in savage_list:
-                result_set.append(await savage)
+            # savage_list = self.get_parse_data(self.savages[0]['encounters'], name, server)
+            # print(await self.get_parse_data(self.savages[0]['encounters'], name, server))
 
-        return result_set
+            return await self.get_parse_data(self.savages[0]['encounters'], name, server)
 
 # fflog 서버 호출
     @classmethod
