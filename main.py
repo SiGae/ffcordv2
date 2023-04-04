@@ -1,9 +1,8 @@
 import asyncio
-import os
+
+import discord
 
 import env
-import discord
-from multiprocessing import Process
 from Fflog import Fflog
 
 
