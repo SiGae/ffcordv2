@@ -1,4 +1,4 @@
-FROM python:3.8
+FROM python:3.10-bullseye
 LABEL maintainer="sigae@protonmail.com"
 COPY . /app
 WORKDIR /app

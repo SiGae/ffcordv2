@@ -99,7 +99,6 @@ class Fflog:
 
 # 파티원 직업 검색
     async def get_party_member(self, code, fight_id):
-        print(f'code{code}, fight_id{fight_id}')
         body = '''
         {
             reportData {

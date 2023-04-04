@@ -7,11 +7,11 @@ from Fflog import Fflog
 
 
 async def formatting_raw(raw):
-    score = "> `점수` : `" + str(raw['점수']) + "`\n"
-    party_member = "> `파티구성` : `" + str(raw['파티구성']) + "`\n"
-    job = "> `직업` : `" + str(raw['직업']) + "`"
+    score = "점수 : " + str(raw['점수']) + "\n"
+    party_member = "파티구성 : " + str(raw['파티구성']) + "\n"
+    job = "직업 : " + str(raw['직업']) + "\n"
 
-    return score + party_member + job
+    return '>------\n'+score + party_member + job
 
 
 async def main(name, server):
@@ -33,10 +33,9 @@ async def refresh_token():
 
 
 async def send_msg(data: dict):
-    result_text = "`" + data['name'] + "`\n"
     text = await asyncio.gather(*[formatting_raw(log_list) for log_list in data['data']])
-
-    return result_text + '\n'.join(text)
+    print('```markdown\n'+'# '+data['name'] + '\n' + ''.join(text)+'```')
+    return '```markdown\n'+'# '+data['name'] + '\n' + ''.join(text)+'```'
 
 intents = discord.Intents.default()
 intents.message_content = True
