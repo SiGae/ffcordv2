@@ -9,9 +9,10 @@ from env import FFLOG_CLIENT, FFLOG_SECRET, CLIENT_URL, TOKEN_URL, JOB_KEY, JOB_
 class Fflog:
     token = None
     user_id = None
-    recent_expansion = None
+    recent_expansion = 1
     savages = []
 
+    # oAUTH2 토큰 취득
     @classmethod
     async def getToken(cls):
         async with aiohttp.ClientSession() as session:
@@ -21,8 +22,7 @@ class Fflog:
                                         FFLOG_CLIENT, FFLOG_SECRET)) as resp:
                 cls.token = (await resp.json())["access_token"]
 
-# 캐릭터 명 유효성 확인
-
+    # 캐릭터 명 유효성 확인
     async def check_character_valid(self, name, server):
         body = '''{ characterData {
               character(name: "%s", serverSlug: "%s", serverRegion: "KR") {
@@ -31,15 +31,15 @@ class Fflog:
             }}
           ''' % (name, server)
 
-        self.user_id = (await self.call_fflog_server(body)
-                        )['data']['characterData']['character']['id']
+        self.user_id = (
+            await self._get(body))['data']['characterData']['character']['id']
 
         return
 
-# 레이드 종류 검색
-
+    # 레이드 종류 검색
     @classmethod
     async def get_savage_raid_list(cls):
+        # 확장팩 내 전퉅 인스턴스
         body = '''
             {
                 worldData {
@@ -61,8 +61,8 @@ class Fflog:
             }
         ''' % cls.recent_expansion
 
-        zones = (await cls.call_fflog_server(body)
-                 )['data']['worldData']['expansion']['zones']
+        zones = (await
+                 cls._get(body))['data']['worldData']['expansion']['zones']
 
         for zone in zones:
             if len([
@@ -77,8 +77,7 @@ class Fflog:
 
         return
 
-# 최근 확장팩 정보 취득
-
+    # 최근 확장팩 정보 취득
     @classmethod
     async def get_recent_expansion(cls):
         body = '''
@@ -91,16 +90,14 @@ class Fflog:
         }
         '''
 
-        expansions = (
-            await
-            cls.call_fflog_server(body))['data']['worldData']['expansions']
+        expansions = (await cls._get(body))['data']['worldData']['expansions']
         recent_expansion = sorted(expansions,
                                   key=lambda d: d['id'],
                                   reverse=True)
         cls.recent_expansion = recent_expansion[0]['id']
 
     async def get_party_info(self, log):
-        log['파티구성'] = await self.get_party_member(log['code'], log['id'])
+        log['파티구성'] = await self._get_party_member(log['code'], log['id'])
         log['직업'] = log['job']
         del log['code']
         del log['id']
@@ -110,7 +107,7 @@ class Fflog:
 
 # 파티원 직업 검색
 
-    async def get_party_member(self, code, fight_id):
+    async def _get_party_member(self, report_code, fight_id):
         body = '''
         {
             reportData {
@@ -120,28 +117,23 @@ class Fflog:
             }
         }
 
-        ''' % (code, fight_id)
-        party_member = (
-            await self.call_fflog_server(body)
-        )['data']['reportData']['report']['rankings']['data'][0]['roles']
-        classes = []
+        ''' % (report_code, fight_id)
 
-        for class_group, class_data in party_member.items():
-            self._get_class(class_data, classes)
+        party_member = (
+            await self._get(body)
+        )['data']['reportData']['report']['rankings']['data'][0]['roles']
+
+        classes = [
+            JOB_KEY[user_class['class']]
+            for class_group, class_data in party_member.items()
+            for user_class in class_data['characters']
+        ]
 
         classes = sorted(list(set(classes)))
 
-        result_set = []
-        for each_class in classes:
-            result_set.append(JOB_SHORT[each_class])
+        result_set = [JOB_SHORT[each_class] for each_class in classes]
 
         return ''.join(result_set)
-
-    def _get_class(self, class_type, classes: list):
-        for character in class_type['characters']:
-            classes.append(JOB_KEY[character['class']])
-
-        return classes
 
     async def get_parse_data(self, encounters, name, server):
         query_list = []
@@ -159,46 +151,32 @@ class Fflog:
             }}
           ''' % (name, server, '\n'.join(query_list))
 
-        print(body)
-
-        result = await self.call_fflog_server(body)
-
-        response = []
+        result = await self._get(body)
 
         if not ('error' in result.keys()):
-            response = await asyncio.gather(*[
+            return await asyncio.gather(*[
                 self.get_score(key_back[key], Analysis(encounter, self))
                 for key, encounter in result['data']['characterData']
                 ['character'].items()
             ])
-
-        return response
 
     async def get_score(self, name: str, analysis: Analysis):
         return {'name': name, 'data': await analysis.get_highest_parse()}
 
     async def classify_by_season(self, name, server):
         if len(self.savages) > 0:
-
-            # savage_list = self.get_parse_data(self.savages[0]['encounters'], name, server)
-            # print(await self.get_parse_data(self.savages[0]['encounters'], name, server))
-
             return await self.get_parse_data(self.savages[0]['encounters'],
                                              name, server)
 
-
-# fflog 서버 호출
-
+    # fflog 서버 호출
     @classmethod
-    async def call_fflog_server(cls, query):
+    async def _get(cls, query):
 
         async with aiohttp.ClientSession() as session:
             async with session.get(f'{CLIENT_URL}',
                                    headers={
-                                       'Authorization':
-                                       'Bearer {}'.format(cls.token),
-                                       'Content-Type':
-                                       'application/json'
+                                       'Authorization': f'Bearer {cls.token}',
+                                       'Content-Type': 'application/json'
                                    },
                                    json={"query": query}) as resp:
                 try:
