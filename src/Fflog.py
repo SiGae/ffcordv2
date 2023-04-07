@@ -64,6 +64,7 @@ class Fflog:
         zones = (await
                  cls._get(body))['data']['worldData']['expansion']['zones']
 
+        # 난이도가 영웅난이도인 8인용 레이드 리스트 저장
         for zone in zones:
             if len([
                     difficulty for difficulty in zone['difficulties']
@@ -97,6 +98,7 @@ class Fflog:
         cls.recent_expansion = recent_expansion[0]['id']
 
     async def get_party_info(self, log):
+    # 파티 정보 정리 
         log['파티구성'] = await self._get_party_member(log['code'], log['id'])
         log['직업'] = log['job']
         del log['code']
@@ -105,8 +107,7 @@ class Fflog:
 
         return log
 
-# 파티원 직업 검색
-
+    # 파티원 직업 검색
     async def _get_party_member(self, report_code, fight_id):
         body = '''
         {
@@ -138,12 +139,15 @@ class Fflog:
     async def get_parse_data(self, encounters, name, server):
         query_list = []
         key_back = {}
+
+        # 검색 쿼리 생성
         for encounter in encounters:
             query_list.append(
                 f'a{encounter["id"]}: encounterRankings(encounterID: {encounter["id"]}, difficulty: 101, metric: rdps)'
             )
             key_back[f'a{encounter["id"]}'] = encounter["name"]
 
+        # 쿼리 결합
         body = '''{ characterData {
               character(name: "%s", serverSlug: "%s", serverRegion: "KR") {
                 %s
@@ -151,8 +155,10 @@ class Fflog:
             }}
           ''' % (name, server, '\n'.join(query_list))
 
+        # 검색
         result = await self._get(body)
 
+        # 정상일 경우
         if not ('error' in result.keys()):
             return await asyncio.gather(*[
                 self.get_score(key_back[key], Analysis(encounter, self))
@@ -163,6 +169,7 @@ class Fflog:
     async def get_score(self, name: str, analysis: Analysis):
         return {'name': name, 'data': await analysis.get_highest_parse()}
 
+    # 최근 레이드 기준 검색
     async def classify_by_season(self, name, server):
         if len(self.savages) > 0:
             return await self.get_parse_data(self.savages[0]['encounters'],

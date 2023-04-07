@@ -11,6 +11,7 @@ class Analysis:
         self.raw_data = raw_data
         self.fflog = fflog
 
+    # 최고 점수만 추출
     async def get_highest_parse(self):
         ranks = self.raw_data['ranks']
         parse_list = []
