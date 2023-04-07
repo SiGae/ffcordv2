@@ -129,11 +129,10 @@ class Fflog:
             }
         return
 
-    async def get_score(self, name, highest_list):
+    async def get_member_info(self, name, highest_list):
         party_info = [
             self._get_log_info(highest_log) for highest_log in highest_list
         ]
-
         return {
             'name': self.savage_name_from_key[name],
             'data': await asyncio.gather(*party_info)
@@ -182,7 +181,7 @@ class Fflog:
             await self.get_parse_data(name, server)
 
             return await asyncio.gather(*[
-                self.get_score(encounter_id)
+                self.get_member_info(encounter_id)
                 for encounter_id in self.encounters_dict.keys()
             ])
 

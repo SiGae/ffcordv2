@@ -9,16 +9,19 @@ from Analysis import Analysis
 async def main(name, server):
     print("start_parse")
     fflog = Fflog()
-    print(fflog.savage_name_from_key)
+
+    # 전체 레이드 데이터 추출
     await fflog.get_parse_data(name, server)
 
+    # 직업별 최고기록 추출
     highest_log_dict = {
         encounter_id: await Analysis(encounter_id, fflog).get_highest_parse()
         for encounter_id in fflog.encounters_dict
     }
 
+    # 파티구성 취득
     return await asyncio.gather(*[
-        fflog.get_score(encounter_id, logs)
+        fflog.get_member_info(encounter_id, logs)
         for encounter_id, logs in highest_log_dict.items()
     ])
 
@@ -55,9 +58,12 @@ async def on_message(message):
     split_message = message.content.split()
     if not message.author.bot and (split_message[0] == '/ff'
                                    and split_message[1] in env.SERVER):
+
+        # 게임 데이터 취득
         encounter_logs = await main(split_message[2],
                                     env.SERVER[split_message[1]])
 
+        # 메시지 포매팅
         formatted_message = await asyncio.gather(*[
             message_formatter(encounter_log)
             for encounter_log in encounter_logs
