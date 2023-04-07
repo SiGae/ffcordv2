@@ -12,7 +12,7 @@ class Fflog:
     recent_expansion = 1
     savages = []
 
-    encounters_dict : dict = {}
+    encounters_dict: dict = {}
     savage_name_from_key = {}
 
     # oAUTH2 토큰 취득
@@ -68,8 +68,13 @@ class Fflog:
                  cls._get(body))['data']['worldData']['expansion']['zones']
 
         # 영웅난이도 8인레이드 중 가장 최신 레이드를 가져옵니다.
-        cls.savages = next((zone['encounters'] for zone in zones if any(difficulty['id'] == 101 and difficulty['sizes'] == [8] for difficulty in zone['difficulties'])), None)
-        cls.savage_name_from_key = {str(savage['id']): savage['name'] for savage in cls.savages}
+        cls.savages = next((zone['encounters'] for zone in zones if any(
+            difficulty['id'] == 101 and difficulty['sizes'] == [8]
+            for difficulty in zone['difficulties'])), None)
+        cls.savage_name_from_key = {
+            str(savage['id']): savage['name']
+            for savage in cls.savages
+        }
 
         return
 
@@ -117,14 +122,22 @@ class Fflog:
         # 정상일 경우
         if not ('error' in result.keys()):
             # 결과
-            self.encounters_dict = {key.replace('a', ''): encounter['ranks'] for key, encounter in result['data']['characterData']['character'].items()}
+            self.encounters_dict = {
+                key.replace('a', ''): encounter['ranks']
+                for key, encounter in result['data']['characterData']
+                ['character'].items()
+            }
         return
 
     async def get_score(self, name, highest_list):
-        party_info = [self._get_log_info(highest_log) for highest_log in highest_list]
+        party_info = [
+            self._get_log_info(highest_log) for highest_log in highest_list
+        ]
 
-        return {'name': self.savage_name_from_key[name], 'data': await asyncio.gather(*party_info)}
-
+        return {
+            'name': self.savage_name_from_key[name],
+            'data': await asyncio.gather(*party_info)
+        }
 
     # 파티 정보 정리
     async def _get_log_info(self, log):
@@ -159,7 +172,9 @@ class Fflog:
             for user_class in class_data['characters']
         ]
 
-        return ''.join([JOB_SHORT[each_class] for each_class in sorted(list(set(classes)))])
+        return ''.join([
+            JOB_SHORT[each_class] for each_class in sorted(list(set(classes)))
+        ])
 
     # 최근 레이드 기준 검색
     async def classify_by_season(self, name, server):

@@ -28,4 +28,7 @@ class Analysis:
 
         parse_list.sort(key=itemgetter('job'))
 
-        return [max(list(logs), key=lambda x: x['점수']) for job_name, logs in groupby(parse_list, key=itemgetter("job"))]
+        return [
+            max(list(logs), key=lambda x: x['점수'])
+            for job_name, logs in groupby(parse_list, key=itemgetter("job"))
+        ]

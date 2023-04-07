@@ -12,8 +12,10 @@ async def main(name, server):
     print(fflog.savage_name_from_key)
     await fflog.get_parse_data(name, server)
 
-    highest_log_dict = {encounter_id: await Analysis(encounter_id, fflog).get_highest_parse()
-                        for encounter_id in fflog.encounters_dict}
+    highest_log_dict = {
+        encounter_id: await Analysis(encounter_id, fflog).get_highest_parse()
+        for encounter_id in fflog.encounters_dict
+    }
 
     return await asyncio.gather(*[
         fflog.get_score(encounter_id, logs)
@@ -30,7 +32,10 @@ async def refresh_token():
 
 
 async def message_formatter(data: dict):
-    text = [f'\nBest: {str(log_list["점수"])} | {str(log_list["파티구성"])} | {str(log_list["직업"])} ' for log_list in data['data']]
+    text = [
+        f'\nBest: {str(log_list["점수"])} | {str(log_list["파티구성"])} | {str(log_list["직업"])} '
+        for log_list in data['data']
+    ]
     return '```markdown\n' + '# ' + data['name'] + '\n' + ''.join(text) + '```'
 
 
@@ -50,9 +55,13 @@ async def on_message(message):
     split_message = message.content.split()
     if not message.author.bot and (split_message[0] == '/ff'
                                    and split_message[1] in env.SERVER):
-        encounter_logs = await main(split_message[2], env.SERVER[split_message[1]])
+        encounter_logs = await main(split_message[2],
+                                    env.SERVER[split_message[1]])
 
-        formatted_message = await asyncio.gather(*[message_formatter(encounter_log) for encounter_log in encounter_logs])
+        formatted_message = await asyncio.gather(*[
+            message_formatter(encounter_log)
+            for encounter_log in encounter_logs
+        ])
         await message.channel.send('\n'.join(formatted_message))
 
 
