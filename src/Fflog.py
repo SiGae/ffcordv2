@@ -17,11 +17,12 @@ class Fflog:
         async with aiohttp.ClientSession() as session:
             async with session.post(TOKEN_URL,
                                     data={"grant_type": "client_credentials"},
-                                    auth=aiohttp.BasicAuth(FFLOG_CLIENT, FFLOG_SECRET)
-                                    ) as resp:
+                                    auth=aiohttp.BasicAuth(
+                                        FFLOG_CLIENT, FFLOG_SECRET)) as resp:
                 cls.token = (await resp.json())["access_token"]
 
 # 캐릭터 명 유효성 확인
+
     async def check_character_valid(self, name, server):
         body = '''{ characterData {
               character(name: "%s", serverSlug: "%s", serverRegion: "KR") {
@@ -30,11 +31,13 @@ class Fflog:
             }}
           ''' % (name, server)
 
-        self.user_id = (await self.call_fflog_server(body))['data']['characterData']['character']['id']
+        self.user_id = (await self.call_fflog_server(body)
+                        )['data']['characterData']['character']['id']
 
         return
 
 # 레이드 종류 검색
+
     @classmethod
     async def get_savage_raid_list(cls):
         body = '''
@@ -58,11 +61,14 @@ class Fflog:
             }
         ''' % cls.recent_expansion
 
-        zones = (await cls.call_fflog_server(body))['data']['worldData']['expansion']['zones']
+        zones = (await cls.call_fflog_server(body)
+                 )['data']['worldData']['expansion']['zones']
 
         for zone in zones:
-            if len([difficulty for difficulty in zone['difficulties']
-                    if difficulty['id'] == 101 and difficulty['sizes'] == [8]]) > 0:
+            if len([
+                    difficulty for difficulty in zone['difficulties']
+                    if difficulty['id'] == 101 and difficulty['sizes'] == [8]
+            ]) > 0:
 
                 cls.savages.append({
                     'name': zone['name'],
@@ -72,6 +78,7 @@ class Fflog:
         return
 
 # 최근 확장팩 정보 취득
+
     @classmethod
     async def get_recent_expansion(cls):
         body = '''
@@ -84,8 +91,12 @@ class Fflog:
         }
         '''
 
-        expansions = (await cls.call_fflog_server(body))['data']['worldData']['expansions']
-        recent_expansion = sorted(expansions, key=lambda d: d['id'], reverse=True)
+        expansions = (
+            await
+            cls.call_fflog_server(body))['data']['worldData']['expansions']
+        recent_expansion = sorted(expansions,
+                                  key=lambda d: d['id'],
+                                  reverse=True)
         cls.recent_expansion = recent_expansion[0]['id']
 
     async def get_party_info(self, log):
@@ -98,6 +109,7 @@ class Fflog:
         return log
 
 # 파티원 직업 검색
+
     async def get_party_member(self, code, fight_id):
         body = '''
         {
@@ -109,7 +121,9 @@ class Fflog:
         }
 
         ''' % (code, fight_id)
-        party_member = (await self.call_fflog_server(body))['data']['reportData']['report']['rankings']['data'][0]['roles']
+        party_member = (
+            await self.call_fflog_server(body)
+        )['data']['reportData']['report']['rankings']['data'][0]['roles']
         classes = []
 
         for class_group, class_data in party_member.items():
@@ -133,7 +147,9 @@ class Fflog:
         query_list = []
         key_back = {}
         for encounter in encounters:
-            query_list.append(f'a{encounter["id"]}: encounterRankings(encounterID: {encounter["id"]}, difficulty: 101, metric: rdps)')
+            query_list.append(
+                f'a{encounter["id"]}: encounterRankings(encounterID: {encounter["id"]}, difficulty: 101, metric: rdps)'
+            )
             key_back[f'a{encounter["id"]}'] = encounter["name"]
 
         body = '''{ characterData {
@@ -150,7 +166,11 @@ class Fflog:
         response = []
 
         if not ('error' in result.keys()):
-            response = await asyncio.gather(*[self.get_score(key_back[key], Analysis(encounter, self)) for key, encounter in result['data']['characterData']['character'].items()])
+            response = await asyncio.gather(*[
+                self.get_score(key_back[key], Analysis(encounter, self))
+                for key, encounter in result['data']['characterData']
+                ['character'].items()
+            ])
 
         return response
 
@@ -163,14 +183,24 @@ class Fflog:
             # savage_list = self.get_parse_data(self.savages[0]['encounters'], name, server)
             # print(await self.get_parse_data(self.savages[0]['encounters'], name, server))
 
-            return await self.get_parse_data(self.savages[0]['encounters'], name, server)
+            return await self.get_parse_data(self.savages[0]['encounters'],
+                                             name, server)
+
 
 # fflog 서버 호출
+
     @classmethod
     async def call_fflog_server(cls, query):
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(f'{CLIENT_URL}', headers={'Authorization': 'Bearer {}'.format(cls.token), 'Content-Type': 'application/json'}, json={"query": query}) as resp:
+            async with session.get(f'{CLIENT_URL}',
+                                   headers={
+                                       'Authorization':
+                                       'Bearer {}'.format(cls.token),
+                                       'Content-Type':
+                                       'application/json'
+                                   },
+                                   json={"query": query}) as resp:
                 try:
                     response_content = await resp.json()
                 except Exception:

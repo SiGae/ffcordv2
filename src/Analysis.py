@@ -6,6 +6,7 @@ from env import JOB
 
 
 class Analysis:
+
     def __init__(self, raw_data, fflog):
         self.raw_data = raw_data
         self.fflog = fflog
@@ -15,10 +16,14 @@ class Analysis:
         parse_list = []
         for rank in ranks:
             parse_list.append({
-                'code': rank['report']['code'],
-                'id': rank['report']['fightID'],
-                'job': JOB[rank['spec']],
-                '점수': math.trunc(rank['historicalPercent'] * 10) / 10
+                'code':
+                rank['report']['code'],
+                'id':
+                rank['report']['fightID'],
+                'job':
+                JOB[rank['spec']],
+                '점수':
+                math.trunc(rank['historicalPercent'] * 10) / 10
             })
 
         highest_list = []
@@ -37,4 +42,3 @@ class Analysis:
             party_info.append(self.fflog.get_party_info(i))
 
         return await asyncio.gather(*party_info)
-
