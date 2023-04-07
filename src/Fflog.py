@@ -12,6 +12,9 @@ class Fflog:
     recent_expansion = 1
     savages = []
 
+    encounters_dict : dict = {}
+    savage_name_from_key = {}
+
     # oAUTH2 토큰 취득
     @classmethod
     async def getToken(cls):
@@ -64,17 +67,9 @@ class Fflog:
         zones = (await
                  cls._get(body))['data']['worldData']['expansion']['zones']
 
-        # 난이도가 영웅난이도인 8인용 레이드 리스트 저장
-        for zone in zones:
-            if len([
-                    difficulty for difficulty in zone['difficulties']
-                    if difficulty['id'] == 101 and difficulty['sizes'] == [8]
-            ]) > 0:
-
-                cls.savages.append({
-                    'name': zone['name'],
-                    'encounters': zone['encounters']
-                })
+        # 영웅난이도 8인레이드 중 가장 최신 레이드를 가져옵니다.
+        cls.savages = next((zone['encounters'] for zone in zones if any(difficulty['id'] == 101 and difficulty['sizes'] == [8] for difficulty in zone['difficulties'])), None)
+        cls.savage_name_from_key = {str(savage['id']): savage['name'] for savage in cls.savages}
 
         return
 
@@ -97,8 +92,42 @@ class Fflog:
                                   reverse=True)
         cls.recent_expansion = recent_expansion[0]['id']
 
-    async def get_party_info(self, log):
-    # 파티 정보 정리 
+    async def get_parse_data(self, name, server):
+        query_list = []
+        key_back = {}
+
+        # 검색 쿼리 생성
+        for savage in self.savages:
+            query_list.append(
+                f'a{savage["id"]}: encounterRankings(encounterID: {savage["id"]}, difficulty: 101, metric: rdps)'
+            )
+            key_back[f'a{savage["id"]}'] = savage["name"]
+
+        # 쿼리 결합
+        body = '''{ characterData {
+              character(name: "%s", serverSlug: "%s", serverRegion: "KR") {
+                %s
+              }
+            }}
+          ''' % (name, server, '\n'.join(query_list))
+
+        # 검색
+        result = await self._get(body)
+
+        # 정상일 경우
+        if not ('error' in result.keys()):
+            # 결과
+            self.encounters_dict = {key.replace('a', ''): encounter['ranks'] for key, encounter in result['data']['characterData']['character'].items()}
+        return
+
+    async def get_score(self, name, highest_list):
+        party_info = [self._get_log_info(highest_log) for highest_log in highest_list]
+
+        return {'name': self.savage_name_from_key[name], 'data': await asyncio.gather(*party_info)}
+
+
+    # 파티 정보 정리
+    async def _get_log_info(self, log):
         log['파티구성'] = await self._get_party_member(log['code'], log['id'])
         log['직업'] = log['job']
         del log['code']
@@ -130,50 +159,17 @@ class Fflog:
             for user_class in class_data['characters']
         ]
 
-        classes = sorted(list(set(classes)))
-
-        result_set = [JOB_SHORT[each_class] for each_class in classes]
-
-        return ''.join(result_set)
-
-    async def get_parse_data(self, encounters, name, server):
-        query_list = []
-        key_back = {}
-
-        # 검색 쿼리 생성
-        for encounter in encounters:
-            query_list.append(
-                f'a{encounter["id"]}: encounterRankings(encounterID: {encounter["id"]}, difficulty: 101, metric: rdps)'
-            )
-            key_back[f'a{encounter["id"]}'] = encounter["name"]
-
-        # 쿼리 결합
-        body = '''{ characterData {
-              character(name: "%s", serverSlug: "%s", serverRegion: "KR") {
-                %s
-              }
-            }}
-          ''' % (name, server, '\n'.join(query_list))
-
-        # 검색
-        result = await self._get(body)
-
-        # 정상일 경우
-        if not ('error' in result.keys()):
-            return await asyncio.gather(*[
-                self.get_score(key_back[key], Analysis(encounter, self))
-                for key, encounter in result['data']['characterData']
-                ['character'].items()
-            ])
-
-    async def get_score(self, name: str, analysis: Analysis):
-        return {'name': name, 'data': await analysis.get_highest_parse()}
+        return ''.join([JOB_SHORT[each_class] for each_class in sorted(list(set(classes)))])
 
     # 최근 레이드 기준 검색
     async def classify_by_season(self, name, server):
         if len(self.savages) > 0:
-            return await self.get_parse_data(self.savages[0]['encounters'],
-                                             name, server)
+            await self.get_parse_data(name, server)
+
+            return await asyncio.gather(*[
+                self.get_score(encounter_id)
+                for encounter_id in self.encounters_dict.keys()
+            ])
 
     # fflog 서버 호출
     @classmethod

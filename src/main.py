@@ -3,24 +3,22 @@ import discord
 
 import env
 from Fflog import Fflog
-
-
-async def formatting_raw(raw):
-    score = "점수 : " + str(raw['점수']) + "\n"
-    party_member = "파티구성 : " + str(raw['파티구성']) + "\n"
-    job = "직업 : " + str(raw['직업']) + "\n"
-
-    return '------\n' + score + party_member + job
+from Analysis import Analysis
 
 
 async def main(name, server):
     print("start_parse")
     fflog = Fflog()
+    print(fflog.savage_name_from_key)
+    await fflog.get_parse_data(name, server)
 
-    # setup = [fflog.check_character_valid(name, server)]
-    # await fflog.check_character_valid(name, server)
+    highest_log_dict = {encounter_id: await Analysis(encounter_id, fflog).get_highest_parse()
+                        for encounter_id in fflog.encounters_dict}
 
-    return await fflog.classify_by_season(name, server)
+    return await asyncio.gather(*[
+        fflog.get_score(encounter_id, logs)
+        for encounter_id, logs in highest_log_dict.items()
+    ])
 
 
 async def refresh_token():
@@ -31,9 +29,8 @@ async def refresh_token():
         await asyncio.sleep(3600)
 
 
-async def send_msg(data: dict):
-    text = await asyncio.gather(
-        *[formatting_raw(log_list) for log_list in data['data']])
+async def message_formatter(data: dict):
+    text = [f'\nBest: {str(log_list["점수"])} | {str(log_list["파티구성"])} | {str(log_list["직업"])} ' for log_list in data['data']]
     return '```markdown\n' + '# ' + data['name'] + '\n' + ''.join(text) + '```'
 
 
@@ -53,9 +50,10 @@ async def on_message(message):
     split_message = message.content.split()
     if not message.author.bot and (split_message[0] == '/ff'
                                    and split_message[1] in env.SERVER):
-        result = (await main(split_message[2], env.SERVER[split_message[1]]))
-        pre = await asyncio.gather(*[send_msg(floor) for floor in result])
-        await message.channel.send('\n'.join(pre))
+        encounter_logs = await main(split_message[2], env.SERVER[split_message[1]])
+
+        formatted_message = await asyncio.gather(*[message_formatter(encounter_log) for encounter_log in encounter_logs])
+        await message.channel.send('\n'.join(formatted_message))
 
 
 loop = asyncio.get_event_loop()
