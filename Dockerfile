@@ -3,4 +3,4 @@ LABEL maintainer="sigae@protonmail.com"
 COPY . /app
 WORKDIR /app
 RUN pip3 install -r requirements.txt
-ENTRYPOINT ["python", "main.py"]
+ENTRYPOINT ["python", "main.py"]WORKDIR /app/src

@@ -1,5 +1,4 @@
 import asyncio
-
 import discord
 
 import env
@@ -11,7 +10,7 @@ async def formatting_raw(raw):
     party_member = "파티구성 : " + str(raw['파티구성']) + "\n"
     job = "직업 : " + str(raw['직업']) + "\n"
 
-    return '>------\n'+score + party_member + job
+    return '------\n'+score + party_member + job
 
 
 async def main(name, server):
@@ -34,7 +33,6 @@ async def refresh_token():
 
 async def send_msg(data: dict):
     text = await asyncio.gather(*[formatting_raw(log_list) for log_list in data['data']])
-    print('```markdown\n'+'# '+data['name'] + '\n' + ''.join(text)+'```')
     return '```markdown\n'+'# '+data['name'] + '\n' + ''.join(text)+'```'
 
 intents = discord.Intents.default()
@@ -51,7 +49,7 @@ async def on_ready():
 @client.event
 async def on_message(message):
     split_message = message.content.split()
-    if not message.author.bot and (split_message[0] == '/ff' and split_message[1] in env.SERVER):
+    if not message.author.bot and (split_message[0]== '/ff' and split_message[1] in env.SERVER):
         result = (await main(split_message[2], env.SERVER[split_message[1]]))
         pre = await asyncio.gather(*[send_msg(floor) for floor in result])
         await message.channel.send('\n'.join(pre))

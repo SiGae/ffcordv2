@@ -143,6 +143,8 @@ class Fflog:
             }}
           ''' % (name, server, '\n'.join(query_list))
 
+        print(body)
+
         result = await self.call_fflog_server(body)
 
         response = []
